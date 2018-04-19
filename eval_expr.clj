@@ -1,18 +1,18 @@
 (ns eval-expr
-  (:require [clojure.test :as t :refer [is deftest]]))
+  (:require [clojure.test :as t :refer [is deftest]]
+            [clojure.core.match :refer [match]]))
+
 (defn eval-expr
   [expr env]
-  (cond
-    (symbol? expr) (env expr)
-    (= 'fn (first expr)) (let [[_ [x] body] expr]
-                           (fn [arg]
-                             (eval-expr body (fn [y]
-                                               (if (= x y)
-                                                 arg
-                                                 (get env y))))))
-    :else (let [[rator rand] expr]
-            ((eval-expr rator env)
-             (eval-expr rand env)))))
+  (match [expr]
+         [(x :guard symbol?)] (env x)
+         [(['fn [x] body] :seq)] (fn [arg]
+                                   (eval-expr body (fn [y]
+                                                     (if (= x y)
+                                                       arg
+                                                       (env y)))))
+         [([rator rand] :seq)] ((eval-expr rator env)
+                                (eval-expr rand env))))
 
 (defn environment [y]
   (->> y name (symbol "clojure.core")))
@@ -35,7 +35,7 @@
                         (environment arg))))))
 
   (is (= 'hello
-         (eval-expr '((fn (n) n) hello)
+         (eval-expr '((fn [n] n) hello)
                     (fn [arg]
                       (if (= arg 'hello)
                         'hello
