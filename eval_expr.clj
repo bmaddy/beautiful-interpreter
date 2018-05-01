@@ -30,6 +30,8 @@
 (deftest test-eval-expr
   (testing "number"
     (is (= 5
+           ;; we need to use symbols here because numbers aren't symbols. Theoretically,
+           ;; one could use church encoding.
            (eval-expr 'five (fn [arg]
                               (case arg
                                 'five 5
