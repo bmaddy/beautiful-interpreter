@@ -3,7 +3,7 @@
             [clojure.core.match :refer [match]]))
 
 (defn environment [y]
-  (->> y name (symbol "clojure.core")))
+  (->> y name (symbol "clojure.core") find-var var-get))
 
 (defn eval-expr
   ([expr] (eval-expr expr environment))
@@ -18,9 +18,18 @@
           [(['if t a b] :seq)] (if (eval-expr t env)
                                  (eval-expr a env)
                                  (eval-expr b env))
-          [([rator rand] :seq)] ((eval-expr rator env)
-                                 (eval-expr rand env))
-          :else expr)))
+          [(['* a b] :seq)] (* (eval-expr a env)
+                               (eval-expr b env))
+          [([rator rand] :seq)] (do (clojure.pprint/pprint {:operator (eval-expr rator env)
+                                                            :operand (eval-expr rand env)
+                                                            :res `(~(eval-expr rator env)
+                                                                   ~2)})
+                                    ((eval-expr rator env)
+                                     (eval-expr rand env)))
+          :else (do (clojure.pprint/pprint :else)
+                    expr))))
+
+;; testing...
 
 (deftest test-eval-expr
   (testing "number"
@@ -36,7 +45,7 @@
                           (environment arg)))))))
 
   (testing "use clojure.core as default environment"
-    (is (= 'clojure.core/inc
+    (is (= clojure.core/inc
            (eval-expr 'inc
                       (fn [arg]
                         (if (= arg 'hello)
@@ -59,6 +68,12 @@
     (is (= false
            (eval-expr 'false environment))))
 
+  (testing "2-arity functions"
+    (is (= 2
+           (eval-expr '(inc 1))))
+    (is (= 2
+           (eval-expr '(* 1 2)))))
+
   (testing "5! using the y-combinator"
     (let [fact-5 '(((fn [!]
                       (fn [n]
@@ -73,4 +88,3 @@
              (eval-expr fact-5 environment)))))
 
   )
-

@@ -1,5 +1,5 @@
-# "the most beautiful program ever written"
-as described here https://www.youtube.com/watch?v=OyfBQmvr2Hc in clojure
+# A Clojure version of "the most beautiful program ever written"
+as described here https://www.youtube.com/watch?v=OyfBQmvr2Hc
 
 
 ```bash
