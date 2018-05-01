@@ -12,12 +12,7 @@ eval-expr=> (run-tests)
 
 Testing eval-expr
 
-FAIL in (test-eval-expr) (eval_expr.clj:72)
-5! using the y-combinator
-expected: (= 120 (eval-expr fact-5 environment))
-  actual: (not (= 120 (* n ((! !) (dec n)))))
-
-Ran 1 tests containing 7 assertions.
-1 failures, 0 errors.
-{:test 1, :pass 6, :fail 1, :error 0, :type :summary}
+Ran 1 tests containing 8 assertions.
+0 failures, 0 errors.
+{:test 1, :pass 8, :fail 0, :error 0, :type :summary}
 ```
