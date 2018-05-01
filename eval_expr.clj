@@ -3,7 +3,9 @@
             [clojure.core.match :refer [match]]))
 
 (defn environment [y]
-  (->> y name (symbol "clojure.core") find-var var-get))
+  (if (symbol? y)
+    (-> y resolve var-get)
+    y))
 
 (defn eval-expr
   ([expr] (eval-expr expr environment))
@@ -15,19 +17,23 @@
                                                       (if (= x y)
                                                         arg
                                                         (env y)))))
+          ;; needed for factorial - it should be possible to put this in the environment
+          ;; but I haven't figured it out yet
           [(['if t a b] :seq)] (if (eval-expr t env)
                                  (eval-expr a env)
                                  (eval-expr b env))
           [([rator rand] :seq)] ((eval-expr rator env)
-                                 (eval-expr rand env))
-          :else expr)))
+                                 (eval-expr rand env)))))
 
 ;; testing...
 
 (deftest test-eval-expr
   (testing "number"
     (is (= 5
-           (eval-expr '5 environment))))
+           (eval-expr 'five (fn [arg]
+                              (case arg
+                                'five 5
+                                (environment arg)))))))
 
   (testing "symbol"
     (is (= 'hello
@@ -55,22 +61,28 @@
 
   (testing "scalar values"
     (is (= false
-           (eval-expr 'false environment))))
+           (eval-expr (symbol "false") (fn [arg]
+                                         (cond
+                                           ;; need to do it this way because
+                                           ;; (symbol? 'false) => false
+                                           (and (symbol? arg) (= (name arg) "false")) false
+                                           :else (environment arg)))))))
 
-  (testing "special forms"
-    (is (= false
-           (eval-expr 'false environment))))
-
-  (testing "2-arity functions"
+  (testing "'multi-arity' functions"
     (is (= 2
-           (eval-expr '(inc 1))))
-    (is (= 6
-           (eval-expr '((mult-by 2) 3)
+           (eval-expr '(inc one)
                       (fn [arg]
-                        (if (= arg 'mult-by)
-                          (fn [x]
-                            (partial * x))
-                          (environment arg)))))))
+                        (case arg
+                          'one 1
+                          (environment arg))))))
+    (is (= 6
+           (eval-expr '((mult-by two) three)
+                      (fn [arg]
+                        (cond
+                          (= arg 'two) 2
+                          (= arg 'three) 3
+                          (= arg 'mult-by) (fn [x] (partial * x))
+                          :else (environment arg)))))))
 
   (testing "5! using the y-combinator"
     (let [fact-5 '(((fn [!]
@@ -79,14 +91,16 @@
                     (fn [!]
                       (fn [n]
                         (if (zero? n)
-                          1
+                          one
                           ((mult-by n) ((! !) (dec n)))))))
-                   5)
+                   five)
           env (fn [arg]
-                (if (= arg 'mult-by)
-                  (fn [x]
-                    (partial * x))
-                  (environment arg)))]
+                (cond
+                  (= arg 'one) 1
+                  (= arg 'five) 5
+                  (= arg 'mult-by) (fn [x]
+                                     (partial * x))
+                  :else (environment arg)))]
       (is (= 120
              (eval-expr fact-5 env)))))
 
