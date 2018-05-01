@@ -18,16 +18,9 @@
           [(['if t a b] :seq)] (if (eval-expr t env)
                                  (eval-expr a env)
                                  (eval-expr b env))
-          [(['* a b] :seq)] (* (eval-expr a env)
-                               (eval-expr b env))
-          [([rator rand] :seq)] (do (clojure.pprint/pprint {:operator (eval-expr rator env)
-                                                            :operand (eval-expr rand env)
-                                                            :res `(~(eval-expr rator env)
-                                                                   ~2)})
-                                    ((eval-expr rator env)
-                                     (eval-expr rand env)))
-          :else (do (clojure.pprint/pprint :else)
-                    expr))))
+          [([rator rand] :seq)] ((eval-expr rator env)
+                                 (eval-expr rand env))
+          :else expr)))
 
 ;; testing...
 
@@ -71,8 +64,13 @@
   (testing "2-arity functions"
     (is (= 2
            (eval-expr '(inc 1))))
-    (is (= 2
-           (eval-expr '(* 1 2)))))
+    (is (= 6
+           (eval-expr '((mult-by 2) 3)
+                      (fn [arg]
+                        (if (= arg 'mult-by)
+                          (fn [x]
+                            (partial * x))
+                          (environment arg)))))))
 
   (testing "5! using the y-combinator"
     (let [fact-5 '(((fn [!]
@@ -82,9 +80,14 @@
                       (fn [n]
                         (if (zero? n)
                           1
-                          (* n ((! !) (dec n)))))))
-                   5)]
+                          ((mult-by n) ((! !) (dec n)))))))
+                   5)
+          env (fn [arg]
+                (if (= arg 'mult-by)
+                  (fn [x]
+                    (partial * x))
+                  (environment arg)))]
       (is (= 120
-             (eval-expr fact-5 environment)))))
+             (eval-expr fact-5 env)))))
 
   )
